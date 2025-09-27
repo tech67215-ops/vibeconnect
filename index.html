@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Connect 🌟</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
+  header { background:#4a00e0; color:white; padding:15px; text-align:center; font-size:26px; animation: fadeIn 1.5s;}
+  .container { padding:20px; max-width:600px; margin:auto; }
+  .card { background:white; padding:15px; margin:15px 0; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.2);}
+  input, textarea { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:1px solid #ccc;}
+  button { padding:10px 15px; border:none; border-radius:8px; background:#4a00e0; color:white; cursor:pointer;}
+  button:hover { background:#7b2ff7; }
+  #login, #signup, #home, #admin { display:none; animation: fadeIn 1s; }
+  .fadeIn { animation: fadeIn 1s;}
+  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+  .chat-box { max-height:200px; overflow-y:auto; background:#fafafa; padding:10px; border-radius:8px; border:1px solid #ddd;}
+  .chat-msg { padding:5px; margin:5px 0; border-bottom:1px solid #eee; }
+</style>
+</head>
+<body>
+<header>Vibe Connect 🌟</header>
+
+<!-- LOGIN PAGE -->
+<div id="login" class="container fadeIn">
+  <h2>Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email">
+  <input type="password" id="loginPass" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p>Nouvo user? <a href="#" onclick="showSignup()">Sign Up</a></p>
+</div>
+
+<!-- SIGNUP PAGE -->
+<div id="signup" class="container fadeIn">
+  <h2>Sign Up</h2>
+  <input type="email" id="signupEmail" placeholder="Email">
+  <input type="password" id="signupPass" placeholder="Password">
+  <button onclick="signup()">Sign Up</button>
+  <p>Already have account? <a href="#" onclick="showLogin()">Login</a></p>
+</div>
+
+<!-- HOME PAGE -->
+<div id="home" class="container fadeIn">
+  <h2>Welcome 🌟</h2>
+  <button onclick="logout()">Logout</button>
+
+  <!-- POST -->
+  <div class="card">
+    <h3>Create Post</h3>
+    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+    <input type="file" id="postFile">
+    <button onclick="createPost()">Post</button>
+  </div>
+
+  <!-- POSTS -->
+  <div id="posts"></div>
+
+  <!-- CHAT -->
+  <div class="card">
+    <h3>Chat</h3>
+    <div class="chat-box" id="chatBox"></div>
+    <input type="text" id="chatInput" placeholder="Type message...">
+    <button onclick="sendChat()">Send</button>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="card">
+    <h3>Your Profile</h3>
+    <p>Email: <span id="profileEmail"></span></p>
+    <p>Points: <span id="profilePoints">0</span></p>
+    <p>Followers: <span id="profileFollowers">0</span></p>
+    <input type="file" id="profilePic">
+    <button onclick="updateProfile()">Update Profile</button>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="admin" class="container fadeIn">
+  <h2>Admin Dashboard 🔑</h2>
+  <ul id="usersList"></ul>
+  <h3>Notifications</h3>
+  <ul id="adminNotifications"></ul>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, updateDoc, increment, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// CONFIG FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyARXQ8sdsXyCnM83qZtc_rMMG66mr02jMg",
+  authDomain: "vibeconnect-fe1f8.firebaseapp.com",
+  projectId: "vibeconnect-fe1f8",
+  storageBucket: "vibeconnect-fe1f8.firebasestorage.app",
+  messagingSenderId: "702844562964",
+  appId: "1:702844562964:web:a4cd3a5081fa5a0b3f8101",
+  measurementId: "G-SMFHSYGL4B"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const adminEmails = ["tech67215@gmail.com"];
+
+// SHOW PAGES
+function showLogin(){ document.getElementById("login").style.display="block"; document.getElementById("signup").style.display="none"; }
+function showSignup(){ document.getElementById("signup").style.display="block"; document.getElementById("login").style.display="none"; }
+showLogin();
+
+// SIGNUP
+async function signup(){
+  const email = document.getElementById("signupEmail").value;
+  const pass = document.getElementById("signupPass").value;
+  try{
+    const userCred = await createUserWithEmailAndPassword(auth,email,pass);
+    await setDoc(doc(db,"users",userCred.user.uid), { email, points:0, followers:0, posts:[], blocked:[] });
+    alert("Signup success ✅");
+  }catch(err){ alert(err.message);}
+}
+
+// LOGIN
+async function login(){
+  const email = document.getElementById("loginEmail").value;
+  const pass = document.getElementById("loginPass").value;
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+    alert("Login success ✅");
+  }catch(err){ alert(err.message);}
+}
+
+// LOGOUT
+function logout(){ signOut(auth); }
+
+// AUTH STATE
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    document.getElementById("login").style.display="none";
+    document.getElementById("signup").style.display="none";
+    document.getElementById("home").style.display="block";
+    document.getElementById("profileEmail").innerText = user.email;
+    if(adminEmails.includes(user.email)){ document.getElementById("admin").style.display="block"; loadUsers(); loadAdminNotifications();}
+    else{ document.getElementById("admin").style.display="none"; }
+    loadPosts(); loadChat();
+  }else{
+    showLogin();
+    document.getElementById("home").style.display="none";
+    document.getElementById("admin").style.display="none";
+  }
+});
+
+// POSTS
+async function createPost(){
+  const content = document.getElementById("postContent").value;
+  const file = document.getElementById("postFile").files[0];
+  if(!content && !file) return;
+  const user = auth.currentUser;
+  const postRef = collection(db,"posts");
+  let points = 0;
+  if(file){
+    const type = file.type.startsWith("image/") ? "image" : "video";
+    points = type === "image" ? 3 : 5;
+  } else { points = 4; }
+  await addDoc(postRef,{uid:user.uid, content, fileType:file?file.type:null, createdAt:serverTimestamp()});
+  await updateDoc(doc(db,"users",user.uid), { points: increment(points) });
+  document.getElementById("postContent").value="";
+}
+
+// LOAD POSTS
+function loadPosts(){ /* TODO: fetch posts from Firestore and display */ }
+
+// CHAT
+function sendChat(){ /* TODO: implement chat */ }
+function loadChat(){ /* TODO: implement chat */ }
+
+// ADMIN
+async function loadUsers(){
+  const snapshot = await getDocs(collection(db,"users"));
+  const list = document.getElementById("usersList");
+  list.innerHTML = "";
+  snapshot.forEach(docSnap=>{
+    const li = document.createElement("li");
+    li.textContent = `${docSnap.data().email} - Points: ${docSnap.data().points || 0}`;
+    list.appendChild(li);
+  });
+}
+async function loadAdminNotifications(){
+  /* TODO: fetch notifications from Firestore */
+}
+</script>
+</body>
+</html>
